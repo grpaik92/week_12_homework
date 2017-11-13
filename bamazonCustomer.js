@@ -13,6 +13,7 @@ const connection = mysql.createConnection({
 //database connection
 connection.connect(function(err) {
   if (err) throw err;
+  start();
 });
 
 function start() {
@@ -33,37 +34,29 @@ function promptCustomerPurchase() {
 		{
 			name: 'id',
 			type: 'input',
-			message: 'Please type in the Item ID you want to purchase...'
+			message: "Please type in the Item ID you want to purchase..."
 		},
 		{
 			name: 'quantity',
 			type: 'input',
-			message: 'Please type the amount of units of this item you would like to purchase...'
+			message: "Please type the amount of units of this item you would like to purchase..."
 		}
 	]).then(function(answer) {
 		var itemID = parseInt((answer.id) - 1);
 		var howMany = parseInt(answer.quantity);
-		var totalPrice = parseFloat((howMany * res[itemID].price).toFixed(2));
-		var updateQuery = "UPDATE products SET ? WHERE ?";
-
-		if (res[itemID].stock_quantity >= howMany) {
-			connection.query(updateQuery, 
-			[
-				{
-					stock_quantity: parseInt(res[itemID].stock_quantity) - parseInt(answer.quantity)
-				},
-				{
-					item_id: answer.id
-				}	
-				
-			], function(err, res) {
-				if (err) throw err;
-				start();
-			})
-
-		} else {
-			console.log("Insufficient quantity. Bamazon only has " + res[itemID].stock_quantity " of" + answer.id + ".");
-			start();
-		}
-	})
+		updateDatabase(itemID, howMany);
+	});
 };
+
+function updateDatabase(itemID, howMany) {
+		connection.query('SELECT * FROM products WHERE item_id = ' + itemID, function(err, res) {
+			if (itemID.stock_quantity >= howMany) {
+				var totalCost = howMany * itemID.price;
+				console.log("Total cost for " + itemID.item_id + " is " + totalCost);
+				connection.query('UPDATE products SET stock_quantity = stock_quantity - ' + howMany + ' WHERE item_id = ' + itemID);
+			} else {
+				console.log("We only have " + itemID.stock_quantity + " of " + itemID.item_id + " left.");
+			} 
+			start();
+		})
+}
